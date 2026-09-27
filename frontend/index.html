@@ -54,7 +54,7 @@
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); transition: background 0.25s ease, color 0.25s ease; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); transition: none !important; }
   body { padding-bottom: 4rem; position: relative; }
 
   /* ============ Ambient physics background layer ============ */
@@ -176,7 +176,7 @@
   .badge.stable { background: var(--stable-bg); color: var(--accent-dark); }
   .badge.unstable { background: var(--unstable-bg); color: var(--warn); }
 
-  #plot, #plot-2d { width: 100%; height: 520px; }
+  #plot, #plot-2d, #plot-velocity-2d { width: 100%; height: 520px; }
 
   /* Plotly canvas/SVG labels: keep render text readable in both themes */
   #plot .xtick text,
@@ -185,8 +185,26 @@
   #plot .axis-title,
   #plot .gtitle,
   #plot .colorbar text,
-  #plot .infolayer text {
+  #plot .infolayer text,
+  #plot-2d .infolayer text,
+  #plot-velocity-2d .infolayer text {
     fill: var(--ink) !important;
+  }
+
+  /* Prevent a brief theme-transition flash inside Plotly render areas. */
+  #plot, #plot-2d, #plot-velocity-2d,
+  #plot .js-plotly-plot, #plot-2d .js-plotly-plot, #plot-velocity-2d .js-plotly-plot {
+    transition: none !important;
+  }
+
+  /* Plotly creates its own SVG background rectangle. Keep it transparent so
+     theme changes never reveal a temporary white/dark box during redraws. */
+  #plot .main-svg, #plot-2d .main-svg, #plot-velocity-2d .main-svg {
+    background: transparent !important;
+  }
+  #plot .bg, #plot-2d .bg, #plot-velocity-2d .bg {
+    fill: transparent !important;
+    stroke: none !important;
   }
 
   .downloads .btn { margin-right: 0.6rem; margin-bottom: 0.6rem; }
@@ -267,7 +285,7 @@ body {
     var(--bg);
   color: var(--ink);
   font-family: var(--sans);
-  transition: background .3s ease, color .3s ease;
+  transition: none !important;
 }
 
 html[data-theme="dark"] body {
@@ -1528,9 +1546,22 @@ async function renderCurve2D() {
       type: 'scatterpolar', r: r, theta: curve.phi_deg, mode: 'lines', fill: 'toself',
       line: {color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#3d6e63'}
     }], {
-      polar: {radialaxis: {visible: true}}, showlegend: false,
-      title: labelMap[property] || property, margin: {t:50},
-      paper_bgcolor: 'rgba(0,0,0,0)', font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}
+      polar: {
+        bgcolor: 'rgba(0,0,0,0)',
+        radialaxis: {
+          visible: true,
+          color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(),
+          tickfont: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()},
+          title: {font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}}
+        },
+        angularaxis: {
+          color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(),
+          tickfont: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}
+        }
+      },
+      showlegend: false,
+      title: {text: labelMap[property] || property, font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}}, margin: {t:50},
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)', font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}
     }, {responsive:true});
     vizStatus.textContent = '';
   } catch (e) { vizStatus.textContent = e.message; vizStatus.className = 'error'; }
@@ -1570,9 +1601,23 @@ document.getElementById('render-velocity-2d-btn').addEventListener('click', asyn
       {type:'scatterpolar', r: curve.velocity_longitudinal, theta: curve.phi_deg, mode:'lines', name:'Quasi-longitudinal', line:{color:'#3d6e63'}},
       {type:'scatterpolar', r: curve.velocity_transverse, theta: curve.phi_deg, mode:'lines', name:'Quasi-transverse', line:{color:'#b5652d'}}
     ], {
-      polar: {radialaxis: {visible: true, title: 'm/s'}}, showlegend: true,
-      title: 'In-plane wave velocities', margin:{t:50},
-      paper_bgcolor: 'rgba(0,0,0,0)', font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}
+      polar: {
+        bgcolor: 'rgba(0,0,0,0)',
+        radialaxis: {
+          visible: true,
+          title: {text: 'm/s', font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}},
+          color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(),
+          tickfont: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}
+        },
+        angularaxis: {
+          color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(),
+          tickfont: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}
+        }
+      }, showlegend: true,
+      title: {text: 'In-plane wave velocities', font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}}, margin:{t:50},
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()},
+      legend: {font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}}
     }, {responsive:true});
     vizStatus.textContent = '';
   } catch (e) { vizStatus.textContent = e.message; vizStatus.className = 'error'; }
@@ -1710,24 +1755,43 @@ function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   document.getElementById('theme-label').textContent = theme === 'dark' ? 'Dark' : 'Light';
 
-  // Keep already-rendered Plotly 3D text in sync with the active theme.
-  // This changes only Plotly's text colors; the plot data and application logic stay untouched.
-  if (typeof Plotly !== 'undefined' && document.getElementById('plot')?.data?.length) {
+  // Keep already-rendered Plotly text in sync with the active theme.
+  if (typeof Plotly !== 'undefined') {
     const plotInk = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim();
-    Plotly.relayout('plot', {
+    const polarUpdate = {
       'font.color': plotInk,
       'title.font.color': plotInk,
-      'scene.xaxis.color': plotInk,
-      'scene.xaxis.tickfont.color': plotInk,
-      'scene.xaxis.title.font.color': plotInk,
-      'scene.yaxis.color': plotInk,
-      'scene.yaxis.tickfont.color': plotInk,
-      'scene.yaxis.title.font.color': plotInk,
-      'scene.zaxis.color': plotInk,
-      'scene.zaxis.tickfont.color': plotInk,
-      'scene.zaxis.title.font.color': plotInk,
-    }).catch(() => {});
+      'polar.bgcolor': 'rgba(0,0,0,0)',
+      'polar.radialaxis.color': plotInk,
+      'polar.radialaxis.tickfont.color': plotInk,
+      'polar.radialaxis.title.font.color': plotInk,
+      'polar.angularaxis.color': plotInk,
+      'polar.angularaxis.tickfont.color': plotInk,
+      'legend.font.color': plotInk
+    };
+    const plot3d = document.getElementById('plot');
+    if (plot3d?.data?.length) {
+      Plotly.relayout(plot3d, {
+        'font.color': plotInk,
+        'title.font.color': plotInk,
+        'scene.xaxis.color': plotInk,
+        'scene.xaxis.tickfont.color': plotInk,
+        'scene.xaxis.title.font.color': plotInk,
+        'scene.yaxis.color': plotInk,
+        'scene.yaxis.tickfont.color': plotInk,
+        'scene.yaxis.title.font.color': plotInk,
+        'scene.zaxis.color': plotInk,
+        'scene.zaxis.tickfont.color': plotInk,
+        'scene.zaxis.title.font.color': plotInk,
+        'paper_bgcolor': 'rgba(0,0,0,0)'
+      }).catch(() => {});
+    }
+    ['plot-2d', 'plot-velocity-2d'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el?.data?.length) Plotly.relayout(el, polarUpdate).catch(() => {});
+    });
   }
+
 }
 
 document.getElementById('theme-toggle').addEventListener('click', () => {
