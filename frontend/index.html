@@ -207,6 +207,12 @@
     stroke: none !important;
   }
 
+
+  .plot-download { display:flex; align-items:center; justify-content:flex-end; gap:.5rem; margin-top:.65rem; flex-wrap:wrap; }
+  .plot-download label { font-size:.82rem; color:var(--ink-soft); margin:0; }
+  .plot-download select { width:auto; min-width:105px; margin:0; }
+  .plot-download .btn { margin:0; }
+
   .downloads .btn { margin-right: 0.6rem; margin-bottom: 0.6rem; }
 
   details.help { margin-bottom: 1rem; }
@@ -719,11 +725,6 @@ code {
   transform: scale(1.15);
   color: #ff4d6d;
 }
-.heart {
-  display: inline-block;
-  animation: heartbeat 1.2s ease-in-out infinite;
-  transform-origin: center;
-}
 
 @keyframes heartbeat {
   0%,
@@ -746,6 +747,12 @@ code {
   60% {
     transform: scale(1);
   }
+}
+
+.heart {
+  display: inline-block;
+  animation: heartbeat 1.2s ease-in-out infinite;
+  transform-origin: center;
 }
 
 @media (max-width: 800px) {
@@ -1033,6 +1040,7 @@ html[data-theme="dark"] #dl-agr-2d:hover {
         <span id="viz-status"></span>
       </div>
       <div id="plot"></div>
+      <div class="plot-download" data-plot-download="plot"><label for="plot-format">Image format</label><select id="plot-format"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="svg">SVG</option><option value="webp">WebP</option></select><button class="btn secondary" type="button" id="plot-download-btn">Download image</button></div>
     </section>
 
     <section id="download-section" style="display:none;">
@@ -1108,6 +1116,7 @@ html[data-theme="dark"] #dl-agr-2d:hover {
         <span id="viz-status-2d"></span>
       </div>
       <div id="plot-2d"></div>
+      <div class="plot-download" data-plot-download="plot-2d"><label for="plot-2d-format">Image format</label><select id="plot-2d-format"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="svg">SVG</option><option value="webp">WebP</option></select><button class="btn secondary" type="button" id="plot-2d-download-btn">Download image</button></div>
     </section>
     <section id="viz-velocity-2d">
       <div class="section-head">
@@ -1121,6 +1130,7 @@ html[data-theme="dark"] #dl-agr-2d:hover {
         <span id="viz-status-velocity-2d"></span>
       </div>
       <div id="plot-velocity-2d"></div>
+      <div class="plot-download" data-plot-download="plot-velocity-2d"><label for="plot-velocity-2d-format">Image format</label><select id="plot-velocity-2d-format"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="svg">SVG</option><option value="webp">WebP</option></select><button class="btn secondary" type="button" id="plot-velocity-2d-download-btn">Download image</button></div>
     </section>
   </div>
 
@@ -1200,7 +1210,7 @@ html[data-theme="dark"] #dl-agr-2d:hover {
     <p class="site-footer">
     Built with love <span class="heart">❤️</span> by a proud
     ex-TU <a href="https://www.dilliramchaudhary.com.np/" target="_blank" rel="noopener noreferrer">alumnus</a>.
-    </p>
+  </p>
   </footer>
 </div>
 
@@ -1856,6 +1866,35 @@ document.getElementById('theme-toggle').addEventListener('click', () => {
 
 loadExamples();
 loadExamples2D();
+
+// ================= Plot image downloads =================
+function downloadPlotImage(plotId, format, filename) {
+  const plot = document.getElementById(plotId);
+  if (!plot || !plot.data || !plot.data.length) {
+    alert('Render the plot first.');
+    return;
+  }
+  const supported = ['png', 'jpeg', 'svg', 'webp'];
+  if (!supported.includes(format)) format = 'png';
+  const baseName = filename || plotId;
+  Plotly.downloadImage(plot, {
+    format,
+    filename: baseName,
+    width: plot.clientWidth || 1000,
+    height: plot.clientHeight || 520
+  }).catch(() => alert('Image download failed.'));
+}
+
+[
+  ['plot', 'plot-format', 'plot-download-btn', 'elatools-3d-plot'],
+  ['plot-2d', 'plot-2d-format', 'plot-2d-download-btn', 'elatools-2d-polar-plot'],
+  ['plot-velocity-2d', 'plot-velocity-2d-format', 'plot-velocity-2d-download-btn', 'elatools-2d-velocity-plot']
+].forEach(([plotId, formatId, buttonId, filename]) => {
+  document.getElementById(buttonId).addEventListener('click', () => {
+    downloadPlotImage(plotId, document.getElementById(formatId).value, filename);
+  });
+});
+
 </script>
 </body>
 </html>
