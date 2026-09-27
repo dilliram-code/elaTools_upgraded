@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ElATools Web · Anisotropic Elastic Properties</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<style>
+  /* ============ Theme tokens ============ */
+  :root {
+    --ink: #172033;
+    --ink-soft: #4b5566;
+    --ink-faint: #8b968f;
+    --bg: #f2f3f0;
+    --bg-raise: #e8eae5;
+    --surface: #ffffff;
+    --line: #d9dbd3;
+    --accent: #3d6e63;
+    --accent-soft: #5f8f83;
+    --accent-dark: #2b4f47;
+    --warn: #b5652d;
+    --stable-bg: #dfeee9;
+    --unstable-bg: #f6e2d3;
+    --diagram-stroke: #3d6e63;
+    --diagram-opacity: 0.5;
+    --grid-opacity: 0.55;
+    --shadow: 0 1px 2px rgba(27,36,48,0.04);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --serif: 'Newsreader', serif;
+    color-scheme: light;
+  }
+  html[data-theme="dark"] {
+    --ink: #e7ece8;
+    --ink-soft: #a9b7b0;
+    --ink-faint: #647069;
+    --bg: #101514;
+    --bg-raise: #171e1c;
+    --surface: #182220;
+    --line: #2a3532;
+    --accent: #6fb8a4;
+    --accent-soft: #4f9484;
+    --accent-dark: #9fd4c2;
+    --warn: #e2a165;
+    --stable-bg: #1d332c;
+    --unstable-bg: #3a2a1c;
+    --diagram-stroke: #6fb8a4;
+    --diagram-opacity: 0.35;
+    --grid-opacity: 0.3;
+    --shadow: 0 1px 3px rgba(0,0,0,0.35);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); transition: background 0.25s ease, color 0.25s ease; }
+  body { padding-bottom: 4rem; position: relative; }
+
+  /* ============ Ambient physics background layer ============ */
+  .physics-bg {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+  }
+  .physics-bg svg { position: absolute; }
+  .bg-grid { top: 0; left: 0; width: 100%; height: 100%; opacity: var(--grid-opacity); }
+  .bg-stress-strain { top: 4%; right: -4%; width: 620px; max-width: 46vw; opacity: var(--diagram-opacity); }
+  .bg-lattice { bottom: -6%; left: -6%; width: 520px; max-width: 42vw; opacity: var(--diagram-opacity); }
+  .bg-wave { top: 46%; left: 38%; width: 520px; max-width: 44vw; opacity: calc(var(--diagram-opacity) - 0.1); }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 1.5rem; position: relative; }
+
+  header.hero { padding: 3rem 0 2rem; border-bottom: 1px solid var(--line); }
+  .hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+  .hero-row { display: flex; align-items: center; gap: 1.75rem; flex-wrap: wrap; }
+  .glyph { flex: 0 0 auto; }
+  .hero-text h1 { font-family: var(--serif); font-weight: 600; font-size: 2.2rem; margin: 0 0 0.4rem; letter-spacing: -0.01em; }
+  .hero-text p { margin: 0; color: var(--ink-soft); font-size: 1rem; max-width: 52ch; line-height: 1.5; }
+
+  /* ============ Theme toggle ============ */
+  .theme-toggle {
+    display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;
+    padding: 0.4rem 0.6rem; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--surface); cursor: pointer; box-shadow: var(--shadow);
+    transition: background-color 0.15s ease, transform 0.08s ease;
+  }
+  .theme-toggle:hover { background: var(--bg-raise); }
+  .theme-toggle:active { transform: scale(0.94); }
+  .theme-toggle svg { width: 18px; height: 18px; display: block; }
+  .theme-toggle .sun-icon { color: #c98a2e; }
+  .theme-toggle .moon-icon { color: #6fb8a4; }
+  .theme-toggle span.tt-label { font-size: 0.78rem; color: var(--ink-soft); }
+  html[data-theme="dark"] .theme-toggle .sun-icon { opacity: 0.35; }
+  html:not([data-theme="dark"]) .theme-toggle .moon-icon { opacity: 0.35; }
+
+  nav.tabs { display: flex; gap: 0.4rem; margin-top: 1.75rem; flex-wrap: wrap; }
+  nav.tabs button {
+    font-family: var(--sans); font-size: 0.92rem; font-weight: 500;
+    padding: 0.5rem 1.1rem; border: 1px solid var(--line); background: var(--surface);
+    border-radius: 999px; cursor: pointer; color: var(--ink-soft);
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+  }
+  nav.tabs button:hover { border-color: var(--accent); color: var(--accent-dark); }
+  nav.tabs button:active { transform: scale(0.96); }
+  nav.tabs button.active { background: var(--accent); color: #0d1210; border-color: var(--accent); font-weight: 600; }
+
+  .tabpanel { display: none; }
+  .tabpanel.active { display: block; }
+
+  section { padding: 2rem 0; border-bottom: 1px solid var(--line); }
+  section:last-of-type { border-bottom: none; }
+
+  .section-head { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1rem; }
+  .section-head .icon { flex: 0 0 auto; opacity: 0.85; }
+  .section-head .icon svg { display: block; }
+  h2.section-title { font-family: var(--serif); font-size: 1.1rem; font-weight: 600; margin: 0; color: var(--accent-dark); }
+  h3.sub-title { font-family: var(--sans); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); margin: 1.5rem 0 0.6rem; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+  @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  label { display: block; font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 0.35rem; }
+
+  select, textarea, button, input[type=text], input[type=number] {
+    font-family: var(--sans); font-size: 0.95rem; border: 1px solid var(--line);
+    border-radius: 4px; background: var(--surface); color: var(--ink);
+  }
+  select, input[type=text], input[type=number] { padding: 0.5rem 0.6rem; width: 100%; margin-bottom: 1rem; }
+  textarea { width: 100%; min-height: 120px; padding: 0.75rem; font-family: var(--mono); font-size: 0.85rem; line-height: 1.5; resize: vertical; margin-bottom: 0.75rem; background: var(--surface); color: var(--ink); }
+
+  /* File upload control: styled to read clearly as a button, not a bare native input */
+  input[type=file] {
+    display: block; width: 100%; margin-bottom: 1rem; padding: 0.55rem 0.7rem;
+    font-family: var(--sans); font-size: 0.88rem; color: var(--ink-soft);
+    background: var(--bg-raise); border: 1.5px dashed var(--accent); border-radius: 6px;
+    cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  input[type=file]:hover { background: var(--stable-bg); border-style: solid; }
+  input[type=file]::file-selector-button {
+    font-family: var(--sans); font-size: 0.85rem; font-weight: 600;
+    padding: 0.45rem 0.9rem; margin-right: 0.75rem;
+    background: var(--accent); color: #0d1210; border: none; border-radius: 5px;
+    cursor: pointer; transition: background-color 0.15s ease, transform 0.08s ease;
+  }
+  input[type=file]::file-selector-button:hover { background: var(--accent-soft); }
+  input[type=file]::file-selector-button:active { transform: scale(0.96); }
+
+  .btn {
+    display: inline-block; padding: 0.6rem 1.1rem; background: var(--accent); color: #0d1210;
+    border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-weight: 600; letter-spacing: 0.01em;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+  }
+  .btn:hover { background: var(--accent-soft); border-color: var(--accent-soft); }
+  .btn:active { transform: scale(0.96); box-shadow: 0 1px 2px rgba(0,0,0,0.15) inset; }
+  .btn.secondary {
+    background: var(--bg-raise); color: var(--accent-dark); border: 1px solid var(--accent);
+    font-weight: 600;
+  }
+  .btn.secondary:hover { background: var(--accent); color: #0d1210; }
+  .btn.secondary:active { transform: scale(0.96); }
+  .btn.small { padding: 0.35rem 0.7rem; font-size: 0.82rem; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  .row > * { margin-bottom: 0; }
+
+  #status, #status-2d, #mp-status { font-size: 0.85rem; color: var(--ink-soft); margin-top: 0.6rem; min-height: 1.2em; }
+  .error { color: var(--warn) !important; }
+
+  table.props { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.86rem; margin-bottom: 0.5rem; }
+  table.props th, table.props td { padding: 0.4rem 0.55rem; text-align: right; border-bottom: 1px solid var(--line); }
+  table.props th:first-child, table.props td:first-child { text-align: left; font-family: var(--sans); }
+  table.props th { color: var(--ink-soft); font-weight: 500; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+  .notes { margin-top: 1rem; font-size: 0.9rem; line-height: 1.6; }
+  .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.78rem; font-weight: 500; margin-right: 0.4rem; }
+  .badge.stable { background: var(--stable-bg); color: var(--accent-dark); }
+  .badge.unstable { background: var(--unstable-bg); color: var(--warn); }
+
+  #plot, #plot-2d { width: 100%; height: 520px; }
+
+  /* Plotly canvas/SVG labels: keep render text readable in both themes */
+  #plot .xtick text,
+  #plot .ytick text,
+  #plot .ztick text,
+  #plot .axis-title,
+  #plot .gtitle,
+  #plot .colorbar text,
+  #plot .infolayer text {
+    fill: var(--ink) !important;
+  }
+
+  .downloads .btn { margin-right: 0.6rem; margin-bottom: 0.6rem; }
+
+  details.help { margin-bottom: 1rem; }
+  details.help summary { cursor: pointer; font-size: 0.85rem; color: var(--accent-dark); }
+  details.help .content { font-size: 0.85rem; color: var(--ink-soft); margin-top: 0.5rem; line-height: 1.5; }
+
+  footer.note { padding-top: 2rem; font-size: 0.8rem; color: var(--ink-soft); line-height: 1.6; }
+  footer.note a { color: var(--accent-dark); }
+
+  .mp-result { padding: 0.5rem 0; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+
+
+/* =========================================================
+   MODERN UI REFRESH — visual-only overrides
+   No application logic, IDs, event handlers, or API behavior changed.
+   ========================================================= */
+:root {
+  --ink: #172033;
+  --ink-soft: #58657a;
+  --ink-faint: #8c98aa;
+  --bg: #f5f8ff;
+  --bg-raise: #edf2fb;
+  --surface: rgba(255,255,255,0.92);
+  --surface-solid: #ffffff;
+  --line: #dfe6f2;
+  --accent: #2563eb;
+  --accent-soft: #4f8cff;
+  --accent-dark: #1746a2;
+  --accent-2: #7c3aed;
+  --cyan: #06b6d4;
+  --warn: #d97706;
+  --stable-bg: #e5f8ef;
+  --unstable-bg: #fff0e6;
+  --diagram-stroke: #5b7fc9;
+  --diagram-opacity: 0.18;
+  --grid-opacity: 0.28;
+  --shadow: 0 14px 40px rgba(36, 63, 110, 0.08);
+  --shadow-hover: 0 20px 55px rgba(36, 63, 110, 0.14);
+  --radius: 18px;
+  --radius-sm: 12px;
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --ink: #edf4ff;
+  --ink-soft: #aab9cf;
+  --ink-faint: #71809a;
+  --bg: #061426;
+  --bg-raise: #0b1d33;
+  --surface: rgba(12, 32, 54, 0.94);
+  --surface-solid: #0d223a;
+  --line: #1d3652;
+  --accent: #00e676;
+  --accent-soft: #35f39a;
+  --accent-dark: #8affc1;
+  --accent-2: #8b5cf6;
+  --cyan: #22d3ee;
+  --warn: #f6b35d;
+  --stable-bg: rgba(0,230,118,0.11);
+  --unstable-bg: rgba(246,179,93,0.12);
+  --diagram-stroke: #3edb9b;
+  --diagram-opacity: 0.20;
+  --grid-opacity: 0.12;
+  --shadow: 0 18px 55px rgba(0,0,0,0.24);
+  --shadow-hover: 0 24px 70px rgba(0,0,0,0.34);
+  color-scheme: dark;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 8% 4%, rgba(37,99,235,0.10), transparent 30%),
+    radial-gradient(circle at 92% 10%, rgba(124,58,237,0.09), transparent 28%),
+    var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  transition: background .3s ease, color .3s ease;
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 8% 2%, rgba(0,230,118,0.08), transparent 27%),
+    radial-gradient(circle at 92% 8%, rgba(34,211,238,0.07), transparent 26%),
+    linear-gradient(180deg, #061426 0%, #071a2d 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+  background-image: radial-gradient(rgba(90,110,145,.14) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.7), transparent 70%);
+}
+
+html[data-theme="dark"] body::before {
+  background-image: radial-gradient(rgba(80,180,145,.12) 1px, transparent 1px);
+}
+
+.wrap {
+  max-width: 1240px;
+  padding: 0 1.25rem;
+}
+
+.physics-bg { opacity: .75; }
+
+header.hero {
+  position: relative;
+  margin-top: 1.25rem;
+  padding: 2.1rem 2rem 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+}
+
+header.hero::before {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  right: -100px;
+  top: -130px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  opacity: .10;
+  filter: blur(10px);
+}
+
+.hero-top { position: relative; z-index: 1; }
+
+.hero-row { gap: 1.25rem; }
+
+.glyph {
+  width: 76px;
+  height: 76px;
+  padding: 9px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(37,99,235,.12), rgba(124,58,237,.10));
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4);
+}
+
+html[data-theme="dark"] .glyph {
+  background: linear-gradient(145deg, rgba(0,230,118,.10), rgba(34,211,238,.08));
+}
+
+.hero-text h1 {
+  font-family: var(--sans);
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  margin-bottom: .65rem;
+}
+
+.hero-text h1::after {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: 8px;
+  margin-bottom: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.hero-text p {
+  max-width: 72ch;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.theme-toggle {
+  position: relative;
+  z-index: 2;
+  min-height: 42px;
+  padding: .5rem .75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-solid);
+  box-shadow: 0 6px 18px rgba(25,45,80,.08);
+}
+
+.theme-toggle:hover {
+  background: var(--bg-raise);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.theme-toggle .sun-icon { color: #f59e0b; }
+.theme-toggle .moon-icon { color: var(--accent); }
+
+nav.tabs {
+  position: relative;
+  z-index: 2;
+  margin-top: 1.4rem;
+  padding: .35rem;
+  gap: .25rem;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-raise);
+}
+
+nav.tabs button {
+  border: 0;
+  border-radius: 10px;
+  padding: .62rem 1rem;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+nav.tabs button:hover {
+  border-color: transparent;
+  color: var(--ink);
+  background: rgba(255,255,255,.65);
+}
+
+html[data-theme="dark"] nav.tabs button:hover { background: rgba(255,255,255,.05); }
+
+nav.tabs button.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  box-shadow: 0 7px 18px rgba(37,99,235,.22);
+}
+
+html[data-theme="dark"] nav.tabs button.active {
+  color: #03130c;
+  background: linear-gradient(135deg, var(--accent), #21d4fd);
+  box-shadow: 0 0 24px rgba(0,230,118,.15);
+}
+
+section {
+  margin: 1.25rem 0;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+section:last-of-type { border-bottom: 1px solid var(--line); }
+
+.section-head {
+  margin-bottom: 1.25rem;
+  padding-bottom: .9rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.section-head .icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
+}
+
+.section-head .icon svg { width: 22px; height: 22px; }
+
+h2.section-title {
+  font-family: var(--sans);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: var(--ink);
+}
+
+h2.section-title:first-letter { color: var(--accent); }
+
+.grid-2 { gap: 1.25rem; }
+
+.grid-2 > div {
+  min-width: 0;
+}
+
+label {
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: .82rem;
+  letter-spacing: .01em;
+}
+
+select, textarea, button, input[type=text], input[type=number] {
+  border-color: var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid);
+  color: var(--ink);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .12s ease, background .18s ease;
+}
+
+select, input[type=text], input[type=number] {
+  min-height: 44px;
+  padding: .65rem .75rem;
+}
+
+textarea {
+  border-radius: 14px;
+  line-height: 1.55;
+  box-shadow: inset 0 1px 2px rgba(20,40,80,.03);
+}
+
+select:hover, textarea:hover, input[type=text]:hover, input[type=number]:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+select:focus, textarea:focus, input[type=text]:focus, input[type=number]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+input[type=file] {
+  min-height: 58px;
+  padding: .65rem .75rem;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg-raise));
+}
+
+input[type=file]:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-raise));
+}
+
+input[type=file]::file-selector-button {
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(37,99,235,.18);
+}
+
+html[data-theme="dark"] input[type=file]::file-selector-button { color: #03130c; }
+
+.btn {
+  min-height: 42px;
+  padding: .62rem 1rem;
+  border: 1px solid var(--accent);
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(37,99,235,.16);
+}
+
+html[data-theme="dark"] .btn { color: #03130c; }
+
+.btn:hover {
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-2));
+  border-color: transparent;
+  transform: translateY(-1px);
+  box-shadow: 0 11px 24px rgba(37,99,235,.22);
+}
+
+.btn.secondary {
+  background: var(--surface-solid);
+  color: var(--accent-dark);
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+  box-shadow: none;
+}
+
+.btn.secondary:hover {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+}
+
+html[data-theme="dark"] .btn.secondary:hover { color: #03130c; }
+
+.btn.small { min-height: 34px; border-radius: 9px; }
+
+.badge {
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.badge.stable { background: var(--stable-bg); color: #15803d; border-color: rgba(21,128,61,.12); }
+.badge.unstable { background: var(--unstable-bg); color: #c2410c; border-color: rgba(194,65,12,.12); }
+html[data-theme="dark"] .badge.stable { color: #70f0ad; }
+html[data-theme="dark"] .badge.unstable { color: #ffc078; }
+
+#status, #status-2d, #mp-status, #viz-status, #viz-status-2d, #viz-status-velocity-2d {
+  font-size: .82rem;
+  color: var(--ink-soft);
+}
+
+.error { color: #dc2626 !important; }
+html[data-theme="dark"] .error { color: #ff9b8d !important; }
+
+.props {
+  min-width: 560px;
+  font-size: .84rem;
+}
+
+.grid-2 > div:has(table.props) { overflow-x: auto; }
+
+table.props th, table.props td {
+  padding: .7rem .7rem;
+  border-bottom: 1px solid var(--line);
+}
+
+table.props tbody tr:hover { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+
+table.props th {
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.notes {
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  background: var(--bg-raise);
+  border: 1px solid var(--line);
+  line-height: 1.7;
+}
+
+.notes strong { color: var(--ink); }
+
+.details, details.help {
+  border-radius: 12px;
+}
+
+details.help {
+  padding: .85rem 1rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-raise) 65%, transparent);
+}
+
+details.help summary {
+  font-weight: 600;
+  color: var(--accent-dark);
+}
+
+details.help .content { margin-top: .85rem; }
+
+#plot, #plot-2d, #plot-velocity-2d {
+  min-height: 420px;
+  height: 520px;
+  padding: .35rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-solid) 80%, transparent);
+}
+
+.downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem;
+}
+
+.downloads .btn { margin: 0; }
+
+.mp-result {
+  margin-bottom: .55rem;
+  padding: .8rem .9rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-solid);
+  box-shadow: 0 5px 18px rgba(20,40,80,.04);
+}
+
+.mp-result:last-child { margin-bottom: 0; }
+
+footer.note {
+  padding: 1.5rem .25rem 2.5rem;
+  color: var(--ink-soft);
+}
+
+footer.note a { color: var(--accent-dark); font-weight: 600; }
+
+code {
+  color: var(--accent-dark);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  padding: .1rem .3rem;
+  border-radius: 5px;
+}
+
+@media (max-width: 800px) {
+  .wrap { padding: 0 .8rem; }
+  header.hero { margin-top: .7rem; padding: 1.35rem; border-radius: 18px; }
+  .hero-top { flex-direction: column; }
+  .hero-row { align-items: flex-start; }
+  .theme-toggle { align-self: flex-start; }
+  nav.tabs { width: 100%; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: thin; }
+  nav.tabs button { flex: 0 0 auto; white-space: nowrap; }
+  section { padding: 1rem; border-radius: 15px; }
+  .grid-2 { grid-template-columns: 1fr; }
+  #plot, #plot-2d, #plot-velocity-2d { height: 420px; min-height: 360px; }
+}
+
+@media (max-width: 520px) {
+  .hero-row { flex-direction: column; }
+  .glyph { width: 60px; height: 60px; padding: 7px; }
+  .hero-text h1 { font-size: 2rem; }
+  .hero-text p { font-size: .9rem; }
+  .section-head { align-items: flex-start; }
+  .row { align-items: stretch; }
+  .row > select, .row > input, .row > button { width: 100% !important; max-width: none !important; }
+  .row > span { width: 100%; }
+  .downloads .btn { width: 100%; }
+  #plot, #plot-2d, #plot-velocity-2d { height: 360px; min-height: 320px; }
+}
+
+
+/* Final dark-mode text visibility fix — button text only */
+html[data-theme="dark"] #render-btn,
+html[data-theme="dark"] #render-2d-btn,
+html[data-theme="dark"] #render-velocity-2d-btn,
+html[data-theme="dark"] #dl-json,
+html[data-theme="dark"] #dl-csv,
+html[data-theme="dark"] #dl-html,
+html[data-theme="dark"] #dl-wrl,
+html[data-theme="dark"] #dl-gnu,
+html[data-theme="dark"] #dl-agr,
+html[data-theme="dark"] #dl-agr-2d {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] #render-btn:hover,
+html[data-theme="dark"] #render-2d-btn:hover,
+html[data-theme="dark"] #render-velocity-2d-btn:hover,
+html[data-theme="dark"] #dl-json:hover,
+html[data-theme="dark"] #dl-csv:hover,
+html[data-theme="dark"] #dl-html:hover,
+html[data-theme="dark"] #dl-wrl:hover,
+html[data-theme="dark"] #dl-gnu:hover,
+html[data-theme="dark"] #dl-agr:hover,
+html[data-theme="dark"] #dl-agr-2d:hover {
+  color: #ffffff;
+}
+
+</style>
+</head>
+<body>
+
+<div class="physics-bg" aria-hidden="true">
+  <!-- graph-paper grid -->
+  <svg class="bg-grid" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id="graphgrid" width="28" height="28" patternUnits="userSpaceOnUse">
+        <path d="M 28 0 L 0 0 0 28" fill="none" stroke="var(--diagram-stroke)" stroke-width="0.4"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#graphgrid)"/>
+  </svg>
+
+  <!-- stress-strain curve, elastic region + yield + plastic region -->
+  <svg class="bg-stress-strain" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+    <line x1="40" y1="260" x2="40" y2="20" stroke="var(--diagram-stroke)" stroke-width="1.2"/>
+    <line x1="40" y1="260" x2="380" y2="260" stroke="var(--diagram-stroke)" stroke-width="1.2"/>
+    <path d="M 40 260 L 150 120" stroke="var(--diagram-stroke)" stroke-width="2" fill="none"/>
+    <path d="M 150 120 C 200 70, 260 60, 300 75 C 330 85, 350 100, 365 130" stroke="var(--diagram-stroke)" stroke-width="2" fill="none"/>
+    <circle cx="150" cy="120" r="4" fill="var(--diagram-stroke)"/>
+    <text x="158" y="112" font-size="11" fill="var(--diagram-stroke)" font-family="IBM Plex Mono, monospace">yield</text>
+    <text x="70" y="180" font-size="11" fill="var(--diagram-stroke)" font-family="IBM Plex Mono, monospace" transform="rotate(-52 70 180)">E = &#963;/&#603;</text>
+    <text x="200" y="290" font-size="12" fill="var(--diagram-stroke)" font-family="Newsreader, serif">strain &#603;</text>
+    <text x="8" y="30" font-size="12" fill="var(--diagram-stroke)" font-family="Newsreader, serif">&#963;</text>
+  </svg>
+
+  <!-- crystal lattice (cubic unit cells) -->
+  <svg class="bg-lattice" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="var(--diagram-stroke)" stroke-width="1" fill="none">
+      <g id="cell">
+        <path d="M 40 320 L 120 320 L 120 240 L 40 240 Z"/>
+        <path d="M 40 320 L 70 290 L 150 290 L 120 320"/>
+        <path d="M 120 240 L 150 210 L 150 290"/>
+        <path d="M 70 290 L 70 210 L 150 210"/>
+        <path d="M 40 240 L 70 210"/>
+      </g>
+      <use href="#cell" x="110" y="0"/>
+      <use href="#cell" x="220" y="0"/>
+      <use href="#cell" x="55" y="-95"/>
+      <use href="#cell" x="165" y="-95"/>
+    </g>
+    <g fill="var(--diagram-stroke)">
+      <circle cx="40" cy="320" r="3.5"/><circle cx="120" cy="320" r="3.5"/>
+      <circle cx="120" cy="240" r="3.5"/><circle cx="40" cy="240" r="3.5"/>
+      <circle cx="70" cy="290" r="3.5"/><circle cx="150" cy="290" r="3.5"/>
+      <circle cx="150" cy="210" r="3.5"/><circle cx="70" cy="210" r="3.5"/>
+    </g>
+  </svg>
+
+  <!-- wave front (phase velocity) -->
+  <svg class="bg-wave" viewBox="0 0 500 140" xmlns="http://www.w3.org/2000/svg">
+    <path d="M 0 70 Q 25 20, 50 70 T 100 70 T 150 70 T 200 70 T 250 70 T 300 70 T 350 70 T 400 70 T 450 70 T 500 70"
+          stroke="var(--diagram-stroke)" stroke-width="1.6" fill="none"/>
+    <path d="M 250 15 L 250 125" stroke="var(--diagram-stroke)" stroke-width="1" stroke-dasharray="4 4"/>
+    <path d="M 250 70 L 300 45" stroke="var(--diagram-stroke)" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+        <path d="M0,0 L8,4 L0,8 Z" fill="var(--diagram-stroke)"/>
+      </marker>
+    </defs>
+  </svg>
+</div>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-top">
+      <div class="hero-row">
+        <svg class="glyph" width="64" height="64" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="50" cy="50" rx="42" ry="26" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.5" opacity="0.5" transform="rotate(20 50 50)"/>
+          <ellipse cx="50" cy="50" rx="30" ry="40" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.5" opacity="0.7" transform="rotate(-30 50 50)"/>
+          <ellipse cx="50" cy="50" rx="20" ry="34" fill="var(--diagram-stroke)" opacity="0.15" stroke="var(--accent-dark)" stroke-width="1.5" transform="rotate(70 50 50)"/>
+        </svg>
+        <div class="hero-text">
+          <h1>ElATools Web</h1>
+          <p>Full anisotropic elastic-property analysis for 3D and 2D crystals: Voigt-Reuss-Hill moduli, hardness and anisotropy indices, wave velocities and power-flow angle, and interactive 3D/2D directional visualizations.</p>
+        </div>
+      </div>
+      <button class="theme-toggle" id="theme-toggle" title="Switch between light and dark mode" aria-label="Toggle dark mode">
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.5"/>
+          <path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8"/>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+        </svg>
+        <span class="tt-label" id="theme-label">Light</span>
+      </button>
+    </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="tab-3d">3D materials</button>
+      <button class="tab-btn" data-tab="tab-2d">2D materials</button>
+      <button class="tab-btn" data-tab="tab-1d">1D materials</button>
+      <button class="tab-btn" data-tab="tab-mp">Materials Database</button>
+    </nav>
+  </header>
+
+  <!-- ============================== 3D TAB ============================== -->
+  <div id="tab-3d" class="tabpanel active">
+
+    <section>
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.6"><rect x="9" y="12" width="14" height="10"/><path d="M16 12V4m0 0l-3 3m3-3l3 3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 22h20" stroke-dasharray="2 2"/></svg></span>
+        <h2 class="section-title">1 &middot; Input</h2>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label for="example-select">Load a built-in example</label>
+          <select id="example-select"><option value="">— choose an example —</option></select>
+
+          <label for="file-input">…or upload a file (Cij.dat, INVELC-matrix, ELADAT — headers are auto-skipped)</label>
+          <input type="file" id="file-input" accept=".dat,.txt" style="margin-bottom:1rem;">
+
+          <details class="help">
+            <summary>Have WIEN2k <code>elast.output</code>-style text instead (e.g. "C11=118.8 C12=53.8 C44=59.4")?</summary>
+            <div class="content">
+              <label for="keyed-symmetry" style="margin-top:0.6rem;">Crystal symmetry</label>
+              <select id="keyed-symmetry">
+                <option value="cubic">Cubic (C11, C12, C44)</option>
+                <option value="tetragonal">Tetragonal (C11, C33, C12, C13, C44, C66)</option>
+                <option value="hexagonal">Hexagonal (C11, C33, C12, C13, C44)</option>
+                <option value="orthorhombic">Orthorhombic (C11, C22, C33, C12, C13, C23, C44, C55, C66)</option>
+                <option value="trigonal">Trigonal (C11, C33, C12, C13, C14, C44)</option>
+              </select>
+              <label for="keyed-text">Keyed values</label>
+              <textarea id="keyed-text" style="min-height:60px;" placeholder="C11=118.8 C12=53.8 C44=59.4"></textarea>
+              <button class="btn secondary small" id="parse-keyed-btn">Parse into matrix</button>
+              <span id="keyed-status"></span>
+            </div>
+          </details>
+        </div>
+        <div>
+          <label for="cij-text">6×6 stiffness matrix C<sub>ij</sub> (GPa) — six rows, six values each</label>
+          <textarea id="cij-text" spellcheck="false" placeholder="118.8  53.8  53.8   0.0   0.0   0.0
+ 53.8 118.8  53.8   0.0   0.0   0.0
+ 53.8  53.8 118.8   0.0   0.0   0.0
+  0.0   0.0   0.0  59.4   0.0   0.0
+  0.0   0.0   0.0   0.0  59.4   0.0
+  0.0   0.0   0.0   0.0   0.0  59.4"></textarea>
+          <label for="density-input">Density (g/cm³) — optional, enables wave velocities &amp; thermal conductivity</label>
+          <input type="number" id="density-input" step="0.01" placeholder="e.g. 5.32 for GaAs">
+          <label for="atomic-mass-input">Average atomic mass (u) — optional, together with density enables Clarke minimum thermal conductivity</label>
+          <input type="number" id="atomic-mass-input" step="0.01" placeholder="e.g. 72.3 for GaAs">
+          <div class="row">
+            <button class="btn" id="analyze-btn">Analyze</button>
+            <span id="status"></span>
+          </div>
+        </div>
+      </div>
+      <details class="help" style="margin-top:1.25rem;">
+        <summary>Look up a property along a specific crystallographic direction (h k l)</summary>
+        <div class="content">
+          <p>Exact for orthogonal systems (cubic, tetragonal, orthorhombic); an approximation otherwise.</p>
+          <div class="row">
+            <input type="number" id="hkl-h" placeholder="h" style="max-width:70px; margin-bottom:0;">
+            <input type="number" id="hkl-k" placeholder="k" style="max-width:70px; margin-bottom:0;">
+            <input type="number" id="hkl-l" placeholder="l" style="max-width:70px; margin-bottom:0;">
+            <button class="btn secondary small" id="hkl-btn">Evaluate</button>
+          </div>
+          <div id="hkl-result" style="margin-top:0.75rem; font-family:var(--mono); font-size:0.85rem;"></div>
+        </div>
+      </details>
+    </section>
+
+    <section id="results-section" style="display:none;">
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.6" stroke-linecap="round"><path d="M6 26V6M6 26h20"/><path d="M6 26 L14 14 C18 9, 22 9, 26 12"/></svg></span>
+        <h2 class="section-title">2 &middot; Elastic properties</h2>
+      </div>
+      <div class="grid-2">
+        <div>
+          <table class="props" id="props-table">
+            <thead><tr><th>Property</th><th>Voigt</th><th>Reuss</th><th>Hill</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <h3 class="sub-title">Hardness models (GPa)</h3>
+          <table class="props" id="hardness-table">
+            <thead><tr><th>Model</th><th>Voigt</th><th>Reuss</th><th>Hill</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div>
+          <div class="notes" id="notes"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="viz-section" style="display:none;">
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32"><ellipse cx="16" cy="16" rx="13" ry="8" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.4" opacity="0.6" transform="rotate(20 16 16)"/><ellipse cx="16" cy="16" rx="9" ry="13" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.4" opacity="0.85" transform="rotate(-25 16 16)"/></svg></span>
+        <h2 class="section-title">3 &middot; Directional (3D) properties</h2>
+      </div>
+      <div class="row" style="margin-bottom:1rem;">
+        <select id="property-select" style="max-width:280px;">
+          <optgroup label="Elastic moduli">
+            <option value="youngs_modulus">Young's Modulus</option>
+            <option value="linear_compressibility">Linear Compressibility</option>
+            <option value="shear_modulus_max">Shear Modulus (max)</option>
+            <option value="shear_modulus_min">Shear Modulus (min)</option>
+            <option value="poisson_max">Poisson's Ratio (max)</option>
+            <option value="poisson_min">Poisson's Ratio (min)</option>
+          </optgroup>
+          <optgroup label="Wave velocities (needs density)">
+            <option value="velocity_p">P-wave velocity</option>
+            <option value="velocity_s_fast">S-wave velocity (fast)</option>
+            <option value="velocity_s_slow">S-wave velocity (slow)</option>
+            <option value="power_flow_angle_p">Power flow angle, P mode</option>
+            <option value="power_flow_angle_s_fast">Power flow angle, S-fast mode</option>
+            <option value="power_flow_angle_s_slow">Power flow angle, S-slow mode</option>
+          </optgroup>
+        </select>
+        <select id="resolution-select" style="max-width:150px;">
+          <option value="low">Low res (fast)</option>
+          <option value="medium" selected>Medium res</option>
+          <option value="high">High res (slow)</option>
+        </select>
+        <select id="viewmode-select" style="max-width:150px;">
+          <option value="surface">3D surface</option>
+          <option value="heatmap">2D heatmap (θ/φ)</option>
+          <option value="slice">Plane slice (2D cut)</option>
+        </select>
+        <select id="plane-select" style="max-width:110px; display:none;">
+          <option value="xy">xy plane</option>
+          <option value="xz">xz plane</option>
+          <option value="yz">yz plane</option>
+        </select>
+        <button class="btn secondary" id="render-btn">Render</button>
+        <span id="viz-status"></span>
+      </div>
+      <div id="plot"></div>
+    </section>
+
+    <section id="download-section" style="display:none;">
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5v15m0 0l-5-5m5 5l5-5"/><path d="M6 25h20"/></svg></span>
+        <h2 class="section-title">4 &middot; Downloads</h2>
+      </div>
+      <div class="downloads">
+        <button class="btn secondary" id="dl-json">Download JSON report</button>
+        <button class="btn secondary" id="dl-csv">Download CSV report</button>
+        <button class="btn secondary" id="dl-html">Download standalone HTML (report + 3D plot)</button>
+        <button class="btn secondary" id="dl-wrl">Download VRML (.wrl) 3D model</button>
+        <button class="btn secondary" id="dl-gnu">Download gnuplot (.gnu) script</button>
+        <button class="btn secondary" id="dl-agr">Download Grace (.agr) — xy-plane cut</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================== 2D TAB ============================== -->
+  <div id="tab-2d" class="tabpanel">
+    <section>
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.4"><path d="M16 4 L24 8.5 V17.5 L16 22 L8 17.5 V8.5 Z"/><path d="M16 4v6M8 8.5l6 3.5M24 8.5l-6 3.5M16 22v-6M8 17.5l6-3.5M24 17.5l-6-3.5"/></svg></span>
+        <h2 class="section-title">1 &middot; Input (2D / monolayer materials)</h2>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label for="example-select-2d">Load a built-in example</label>
+          <select id="example-select-2d"><option value="">— choose an example —</option></select>
+          <label for="file-input-2d">…or upload a Cij-2D.dat file</label>
+          <input type="file" id="file-input-2d" accept=".dat,.txt">
+        </div>
+        <div>
+          <label for="cij-text-2d">3×3 in-plane stiffness matrix C<sub>ij</sub> (N/m)</label>
+          <textarea id="cij-text-2d" spellcheck="false" placeholder="358.0  60.0    0.0
+ 60.0 358.0    0.0
+  0.0   0.0  149.0"></textarea>
+          <div class="row">
+            <button class="btn" id="analyze-2d-btn">Analyze</button>
+            <span id="status-2d"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="results-section-2d" style="display:none;">
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.6" stroke-linecap="round"><path d="M6 26V6M6 26h20"/><path d="M6 26 L14 14 C18 9, 22 9, 26 12"/></svg></span>
+        <h2 class="section-title">2 &middot; 2D elastic properties</h2>
+      </div>
+      <div class="grid-2">
+        <div>
+          <table class="props" id="props-table-2d"><tbody></tbody></table>
+        </div>
+        <div class="notes" id="notes-2d"></div>
+      </div>
+    </section>
+
+    <section id="viz-section-2d" style="display:none;">
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.3"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="6.5"/><path d="M16 5v22M5 16h22M8.5 8.5l15 15M23.5 8.5l-15 15"/></svg></span>
+        <h2 class="section-title">3 &middot; Directional (angular) properties</h2>
+      </div>
+      <div class="row" style="margin-bottom:1rem;">
+        <select id="property-select-2d" style="max-width:280px;">
+          <option value="youngs_modulus">Young's Modulus (N/m)</option>
+          <option value="shear_modulus">Shear Modulus (N/m)</option>
+          <option value="poisson_ratio">Poisson's Ratio</option>
+          <option value="linear_compressibility">Linear Compressibility</option>
+        </select>
+        <button class="btn secondary" id="render-2d-btn">Render polar plot</button>
+        <button class="btn secondary" id="dl-agr-2d">Download Grace (.agr)</button>
+        <span id="viz-status-2d"></span>
+      </div>
+      <div id="plot-2d"></div>
+    </section>
+    <section id="viz-velocity-2d">
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.4" stroke-linecap="round"><path d="M4 16 Q7 8, 10 16 T16 16 T22 16 T28 16"/></svg></span>
+        <h2 class="section-title">4 &middot; In-plane wave velocities</h2>
+      </div>
+      <p style="color:var(--ink-soft); font-size:0.88rem; max-width:60ch;">Needs the 2D (areal) mass density — kg/m² (for a monolayer, this is the bulk density × effective thickness).</p>
+      <div class="row" style="margin-bottom:1rem;">
+        <input type="number" id="areal-density-input" step="0.0000001" placeholder="e.g. 7.6e-7 for graphene" style="max-width:220px; margin-bottom:0;">
+        <button class="btn secondary" id="render-velocity-2d-btn">Render velocity curve</button>
+        <span id="viz-status-velocity-2d"></span>
+      </div>
+      <div id="plot-velocity-2d"></div>
+    </section>
+  </div>
+
+  <!-- ============================== 1D TAB ============================== -->
+  <div id="tab-1d" class="tabpanel">
+    <section>
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.6" stroke-linecap="round"><ellipse cx="16" cy="8" rx="9" ry="3"/><ellipse cx="16" cy="24" rx="9" ry="3"/><path d="M7 8v16M25 8v16"/></svg></span>
+        <h2 class="section-title">Input (1D nanotubes / nanowires)</h2>
+      </div>
+      <p style="color:var(--ink-soft); font-size:0.9rem; max-width:64ch;">A minimal 2×2 axial stiffness matrix, following the original tool's 1D-material module (Ekuma &amp; Liu formulation for tubular nanostructures).</p>
+      <label for="cij-text-1d">2×2 stiffness matrix (GPa)</label>
+      <textarea id="cij-text-1d" spellcheck="false" style="min-height:80px; max-width:320px;" placeholder="50.0   5.0
+ 5.0 100.0"></textarea>
+      <div class="row">
+        <button class="btn" id="analyze-1d-btn">Analyze</button>
+        <span id="status-1d"></span>
+      </div>
+    </section>
+    <section id="results-section-1d" style="display:none;">
+      <h2 class="section-title">Properties</h2>
+      <table class="props" id="props-table-1d"><tbody></tbody></table>
+      <div class="notes" id="notes-1d"></div>
+    </section>
+  </div>
+
+  <!-- ============================== MP TAB ============================== -->
+  <div id="tab-mp" class="tabpanel">
+    <section>
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.3"><rect x="6" y="6" width="20" height="20" rx="2"/><path d="M6 13h20M13 6v20"/></svg></span>
+        <h2 class="section-title">Offline database (13,122 real materials, bundled — no API key needed)</h2>
+      </div>
+      <p style="color:var(--ink-soft); font-size:0.9rem; max-width:64ch; line-height:1.5;">
+        A real, verified snapshot of Materials Project elastic tensors bundled directly with this app —
+        search by material ID (e.g. "mp-66") and load instantly, completely offline.
+      </p>
+      <div class="row">
+        <input type="text" id="offline-db-query" placeholder="mp-66" style="flex:1; margin-bottom:0;">
+        <button class="btn secondary" id="offline-db-search-btn">Search</button>
+      </div>
+      <div id="offline-db-status" style="font-size:0.85rem; color:var(--ink-soft); margin-top:0.6rem;"></div>
+      <div id="offline-db-results" style="margin-top:1rem;"></div>
+    </section>
+    <section>
+      <div class="section-head">
+        <span class="icon"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="var(--diagram-stroke)" stroke-width="1.3"><ellipse cx="16" cy="16" rx="13" ry="5.5"/><ellipse cx="16" cy="16" rx="13" ry="5.5" transform="rotate(60 16 16)"/><ellipse cx="16" cy="16" rx="13" ry="5.5" transform="rotate(120 16 16)"/><circle cx="16" cy="16" r="2.4" fill="var(--diagram-stroke)" stroke="none"/></svg></span>
+        <h2 class="section-title">Live lookup from the Materials Project (search by formula)</h2>
+      </div>
+      <p style="color:var(--ink-soft); font-size:0.92rem; max-width:64ch; line-height:1.5;">
+        Uses the official, documented Materials Project REST API to fetch real DFT-computed
+        elastic tensors for ~13,000+ materials. You need your own free API key from your
+        <a href="https://next-gen.materialsproject.org/api" target="_blank" rel="noopener">Materials Project dashboard</a>.
+        Your key is sent directly to the Materials Project per request and is never stored by this app.
+      </p>
+      <label for="mp-api-key">Materials Project API key</label>
+      <input type="text" id="mp-api-key" placeholder="paste your API key">
+      <label for="mp-formula">Formula or chemical system (e.g. "GaAs", "Fe2O3")</label>
+      <div class="row">
+        <input type="text" id="mp-formula" placeholder="GaAs" style="flex:1; margin-bottom:0;">
+        <button class="btn secondary" id="mp-search-btn">Search</button>
+      </div>
+      <div id="mp-status"></div>
+      <div id="mp-results" style="margin-top:1rem;"></div>
+    </section>
+  </div>
+
+  <footer class="note">
+    3D formulas follow the Voigt–Reuss–Hill averaging scheme; A<sub>L</sub> follows
+    Kube (<em>AIP Advances</em> 6, 095209, 2016); A<sub>U</sub> follows Ranganathan &amp;
+    Ostoja-Starzewski (<em>PRL</em> 101, 055504, 2008); stability follows Mouhat &amp;
+    Coudert (<em>Phys. Rev. B</em> 90, 224104, 2014). Wave velocities and power flow
+    angle use the Christoffel equation. This is an independent, from-scratch
+    reimplementation inspired by the original
+    <a href="https://github.com/shahramyalameha/ElATools" target="_blank" rel="noopener">ElATools</a>
+    project by Shahram Yalameha et al. — see this project's README for full validation notes.
+  </footer>
+</div>
+
+<script>
+const API_BASE = '';
+let currentCijText = '';
+let currentCijText2D = '';
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tabpanel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+function fmt(v) { return typeof v === 'number' ? v.toFixed(4) : v; }
+function fmt3(v) { return typeof v === 'number' ? v.toFixed(3) : v; }
+
+async function loadExamples() {
+  try {
+    const res = await fetch(`${API_BASE}/api/examples`);
+    const data = await res.json();
+    const sel = document.getElementById('example-select');
+    data.examples.forEach(name => {
+      const opt = document.createElement('option'); opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+  } catch (e) { console.error(e); }
+}
+
+document.getElementById('example-select').addEventListener('change', async (e) => {
+  if (!e.target.value) return;
+  const res = await fetch(`${API_BASE}/api/examples/${encodeURIComponent(e.target.value)}`);
+  const data = await res.json();
+  document.getElementById('cij-text').value = data.cij_text.trim();
+});
+
+document.getElementById('file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { document.getElementById('cij-text').value = reader.result.trim(); };
+  reader.readAsText(file);
+});
+
+document.getElementById('parse-keyed-btn').addEventListener('click', async () => {
+  const text = document.getElementById('keyed-text').value.trim();
+  const symmetry = document.getElementById('keyed-symmetry').value;
+  const statusEl = document.getElementById('keyed-status');
+  if (!text) { statusEl.textContent = 'Paste some C11=... text first.'; statusEl.className='error'; return; }
+  try {
+    const res = await fetch(`${API_BASE}/api/parse_keyed`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text, symmetry})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail); }
+    const data = await res.json();
+    document.getElementById('cij-text').value = data.cij_text;
+    statusEl.textContent = 'Parsed into the matrix box below.'; statusEl.className='';
+  } catch (e) { statusEl.textContent = e.message; statusEl.className='error'; }
+});
+
+function setStatus(id, msg, isError=false) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.className = isError ? 'error' : '';
+}
+
+function renderProps(data) {
+  const tbody = document.querySelector('#props-table tbody');
+  tbody.innerHTML = '';
+  const rows = [
+    ['Bulk modulus (GPa)', 'K_V', 'K_R', 'K_H'],
+    ['Shear modulus (GPa)', 'G_V', 'G_R', 'G_H'],
+    ["Young's modulus (GPa)", 'E_V', 'E_R', 'E_H'],
+    ["Poisson's ratio", 'nu_V', 'nu_R', 'nu_H'],
+    ['P-wave modulus (GPa)', 'M_V', 'M_R', 'M_H'],
+    ["Pugh's ratio (K/G)", 'pugh_V', 'pugh_R', 'pugh_H'],
+    ["Lame's 1st parameter (GPa)", 'La1_V', 'La1_R', 'La1_H'],
+    ["Lame's 2nd parameter (GPa)", 'La2_V', 'La2_R', 'La2_H'],
+    ['Machinability index', 'machinability_V', 'machinability_R', 'machinability_H'],
+    ['Grüneisen constant', 'gruneisen_V', 'gruneisen_R', 'gruneisen_H'],
+  ];
+  rows.forEach(([label, v, r, h]) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${label}</td><td>${fmt(data[v])}</td><td>${fmt(data[r])}</td><td>${fmt(data[h])}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const htbody = document.querySelector('#hardness-table tbody');
+  htbody.innerHTML = '';
+  const hrows = [
+    ['H\u2081\u2090 (Teter, via G)', 'H_a1_V', 'H_a1_R', 'H_a1_H'],
+    ['H\u2081_b (Teter, via E)', 'H_b1_V', 'H_b1_R', 'H_b1_H'],
+    ['H\u2082 (Tian, via G)', 'H_2_V', 'H_2_R', 'H_2_H'],
+    ['H\u2083 (via E)', 'H_3_V', 'H_3_R', 'H_3_H'],
+    ['H\u2084 (via K, \u03bd)', 'H_4_V', 'H_4_R', 'H_4_H'],
+    ['H\u2085 (Chen, via G, K/G)', 'H_5_V', 'H_5_R', 'H_5_H'],
+  ];
+  hrows.forEach(([label, v, r, h]) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${label}</td><td>${fmt3(data[v])}</td><td>${fmt3(data[r])}</td><td>${fmt3(data[h])}</td>`;
+    htbody.appendChild(tr);
+  });
+
+  const stabilityBadge = data.stable
+    ? '<span class="badge stable">Mechanically stable</span>'
+    : '<span class="badge unstable">Mechanically unstable</span>';
+
+  document.getElementById('notes').innerHTML = `
+    <p>${stabilityBadge}</p>
+    <p><strong>Universal anisotropy index (A<sub>U</sub>):</strong> ${fmt(data.AU)}<br>
+       <strong>Log-Euclidean anisotropy (A<sub>L</sub>):</strong> ${fmt(data.AL)}<br>
+       <strong>Chung–Buessem index (A<sub>c</sub>):</strong> ${fmt(data.Ac)}<br>
+       <strong>Cauchy pressure P<sub>c</sub>:</strong> ${fmt(data.Pc)} GPa<br>
+       <strong>Kleinman parameter:</strong> ${fmt(data.kleinman)} (${data.bond_character})<br>
+       <strong>Thermal expansion (Hill, 1/K):</strong> ${data.thermal_exp_H.toExponential(3)}</p>
+    <p><strong>Ductility:</strong> ${data.ductility} &nbsp;&middot;&nbsp; <strong>Bonding:</strong> ${data.bonding}</p>
+    ${data.thermal_conductivity_min !== null && data.thermal_conductivity_min !== undefined ? `<p><strong>Clarke min. thermal conductivity:</strong> ${data.thermal_conductivity_min.toFixed(4)} W/(m&middot;K)</p>` : ''}
+    <p style="font-size:0.85rem;"><strong>Hardness model guidance:</strong> ${data.hardness_recommendation}</p>
+    ${data.warnings && data.warnings.length ? '<p class="error">' + data.warnings.join('<br>') + '</p>' : ''}
+  `;
+}
+
+function currentAtomicMass() {
+  const v = parseFloat(document.getElementById('atomic-mass-input').value);
+  return isNaN(v) ? null : v;
+}
+
+async function analyze() {
+  const cijText = document.getElementById('cij-text').value.trim();
+  if (!cijText) { setStatus('status', 'Paste or load a Cij matrix first.', true); return; }
+  currentCijText = cijText;
+  setStatus('status', 'Analyzing…');
+  document.getElementById('analyze-btn').disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/api/analyze`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({cij_text: cijText, density: currentDensity(), avg_atomic_mass: currentAtomicMass()})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Analysis failed'); }
+    const data = await res.json();
+    renderProps(data);
+    document.getElementById('results-section').style.display = 'block';
+    document.getElementById('viz-section').style.display = 'block';
+    document.getElementById('download-section').style.display = 'block';
+    setStatus('status', 'Done.');
+    renderSurface();
+  } catch (e) { setStatus('status', e.message, true); }
+  finally { document.getElementById('analyze-btn').disabled = false; }
+}
+
+function currentDensity() {
+  const v = parseFloat(document.getElementById('density-input').value);
+  return isNaN(v) ? null : v;
+}
+
+document.getElementById('viewmode-select').addEventListener('change', (e) => {
+  document.getElementById('plane-select').style.display = e.target.value === 'slice' ? 'inline-block' : 'none';
+});
+
+async function renderSurface() {
+  if (!currentCijText) return;
+  const property = document.getElementById('property-select').value;
+  const resolution = document.getElementById('resolution-select').value;
+  const viewMode = document.getElementById('viewmode-select').value;
+  const density = currentDensity();
+  const vizStatus = document.getElementById('viz-status');
+  vizStatus.textContent = 'Rendering…'; vizStatus.className = '';
+  document.getElementById('render-btn').disabled = true;
+  const inkColor = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim();
+  try {
+    if (viewMode === 'slice') {
+      const plane = document.getElementById('plane-select').value;
+      const res = await fetch(`${API_BASE}/api/plane_slice`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({cij_text: currentCijText, property, plane, n_points: 180, density})
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Slice generation failed'); }
+      const slice = await res.json();
+      Plotly.newPlot('plot', [{
+        type: 'scatterpolar', r: slice.value, theta: slice.angle_deg, mode: 'lines', fill: 'toself',
+        line: {color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()}
+      }], {
+        polar: {radialaxis: {visible: true}}, showlegend: false,
+        title: `${slice.label} (${slice.unit}) — ${slice.plane} plane`,
+        paper_bgcolor: 'rgba(0,0,0,0)', font: {color: inkColor}
+      }, {responsive:true});
+      vizStatus.textContent = '';
+      return;
+    }
+
+    const res = await fetch(`${API_BASE}/api/surface`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({cij_text: currentCijText, property, resolution, density})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Surface generation failed'); }
+    const mesh = await res.json();
+
+    if (viewMode === 'heatmap') {
+      Plotly.newPlot('plot', [{
+        type: 'heatmap', x: mesh.phi_deg, y: mesh.theta_deg, z: mesh.value,
+        colorscale: 'Viridis', colorbar: {title: mesh.unit}
+      }], {
+        margin: {l:60,r:20,t:40,b:50},
+        xaxis: {title: 'φ (deg)'}, yaxis: {title: 'θ (deg)'},
+        title: `${mesh.label} (${mesh.unit})`,
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+        font: {color: inkColor}
+      }, {responsive:true});
+    } else {
+      Plotly.newPlot('plot', [{
+        type: 'surface', x: mesh.x, y: mesh.y, z: mesh.z,
+        surfacecolor: mesh.value, colorscale: 'Viridis', colorbar: {
+          title: {text: mesh.unit, font: {color: inkColor}},
+          tickfont: {color: inkColor}
+        }
+      }], {
+        margin: {l:0,r:0,t:30,b:0},
+        scene: {
+          aspectmode:'data',
+          xaxis: {color: inkColor, tickfont: {color: inkColor}, showticklabels: true, title: {text: 'x', font: {color: inkColor}}},
+          yaxis: {color: inkColor, tickfont: {color: inkColor}, showticklabels: true, title: {text: 'y', font: {color: inkColor}}},
+          zaxis: {color: inkColor, tickfont: {color: inkColor}, showticklabels: true, title: {text: 'z', font: {color: inkColor}}},
+          bgcolor: 'rgba(0,0,0,0)'
+        },
+        title: {text: `${mesh.label} (${mesh.unit}) — min ${mesh.min.toFixed(2)}, max ${mesh.max.toFixed(2)}`, font: {color: inkColor}},
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        font: {color: inkColor}
+      }, {responsive:true});
+    }
+    vizStatus.textContent = '';
+  } catch (e) { vizStatus.textContent = e.message; vizStatus.className = 'error'; }
+  finally { document.getElementById('render-btn').disabled = false; }
+}
+
+async function download(endpoint, filename, extra={}) {
+  if (!currentCijText) return;
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({cij_text: currentCijText, density: currentDensity(), avg_atomic_mass: currentAtomicMass(), ...extra})
+  });
+  if (!res.ok) { const err = await res.json().catch(()=>({detail:'Download failed'})); alert(err.detail); return; }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('analyze-btn').addEventListener('click', analyze);
+document.getElementById('render-btn').addEventListener('click', renderSurface);
+document.getElementById('dl-json').addEventListener('click', () => download('/api/report.json', 'elatools_report.json'));
+document.getElementById('dl-csv').addEventListener('click', () => download('/api/report.csv', 'elatools_report.csv'));
+document.getElementById('dl-html').addEventListener('click', () => download('/api/standalone_html', 'elatools_report.html', {
+  property: document.getElementById('property-select').value,
+  resolution: document.getElementById('resolution-select').value
+}));
+document.getElementById('dl-wrl').addEventListener('click', () => download('/api/export/wrl', `${document.getElementById('property-select').value}.wrl`, {
+  property: document.getElementById('property-select').value,
+  resolution: document.getElementById('resolution-select').value
+}));
+document.getElementById('dl-gnu').addEventListener('click', () => download('/api/export/gnu', `${document.getElementById('property-select').value}.gnu`, {
+  property: document.getElementById('property-select').value,
+  resolution: document.getElementById('resolution-select').value
+}));
+document.getElementById('dl-agr').addEventListener('click', () => download('/api/export/agr', `${document.getElementById('property-select').value}.agr`, {
+  property: document.getElementById('property-select').value
+}));
+
+// ================= hkl direction lookup =================
+document.getElementById('hkl-btn').addEventListener('click', async () => {
+  const resultEl = document.getElementById('hkl-result');
+  if (!currentCijText) { resultEl.textContent = 'Analyze a matrix first.'; resultEl.className='error'; return; }
+  const h = parseFloat(document.getElementById('hkl-h').value);
+  const k = parseFloat(document.getElementById('hkl-k').value);
+  const l = parseFloat(document.getElementById('hkl-l').value);
+  if ([h,k,l].some(isNaN)) { resultEl.textContent = 'Enter numeric h, k, l values.'; resultEl.className='error'; return; }
+  resultEl.textContent = 'Evaluating…'; resultEl.className='';
+  try {
+    const res = await fetch(`${API_BASE}/api/hkl`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({cij_text: currentCijText, h, k, l, density: currentDensity()})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail); }
+    const d = await res.json();
+    let html = `Young's modulus: ${d.youngs_modulus.toFixed(3)} GPa<br>`;
+    html += `Linear compressibility: ${d.linear_compressibility.toFixed(4)} TPa⁻¹<br>`;
+    html += `Shear modulus: ${d.shear_modulus_min.toFixed(3)} – ${d.shear_modulus_max.toFixed(3)} GPa<br>`;
+    html += `Poisson's ratio: ${d.poisson_min.toFixed(4)} – ${d.poisson_max.toFixed(4)}`;
+    if (d.velocity_p !== undefined) {
+      html += `<br>P velocity: ${d.velocity_p.toFixed(4)} km/s &nbsp;|&nbsp; S-fast: ${d.velocity_s_fast.toFixed(4)} km/s &nbsp;|&nbsp; S-slow: ${d.velocity_s_slow.toFixed(4)} km/s`;
+    }
+    resultEl.innerHTML = html;
+  } catch (e) { resultEl.textContent = e.message; resultEl.className = 'error'; }
+});
+
+async function loadExamples2D() {
+  try {
+    const res = await fetch(`${API_BASE}/api/examples_2d`);
+    const data = await res.json();
+    const sel = document.getElementById('example-select-2d');
+    data.examples.forEach(name => {
+      const opt = document.createElement('option'); opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+  } catch (e) { console.error(e); }
+}
+
+document.getElementById('example-select-2d').addEventListener('change', async (e) => {
+  if (!e.target.value) return;
+  const res = await fetch(`${API_BASE}/api/examples_2d/${encodeURIComponent(e.target.value)}`);
+  const data = await res.json();
+  document.getElementById('cij-text-2d').value = data.cij_text.trim();
+});
+
+document.getElementById('file-input-2d').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { document.getElementById('cij-text-2d').value = reader.result.trim(); };
+  reader.readAsText(file);
+});
+
+function renderProps2D(data) {
+  const tbody = document.querySelector('#props-table-2d tbody');
+  tbody.innerHTML = '';
+  const rows = [
+    ["Young's modulus Ex (N/m)", data.Ex],
+    ["Young's modulus Ey (N/m)", data.Ey],
+    ['Shear modulus Gxy (N/m)', data.Gxy],
+    ['Shear modulus (Voigt) (N/m)', data.Gv],
+    ['Shear modulus (Reuss) (N/m)', data.Gr],
+    ['Area modulus (Voigt) (N/m)', data.Bv],
+    ['Area modulus (Reuss) (N/m)', data.Br],
+    ["Poisson's ratio νxy", data.vxy],
+    ["Poisson's ratio νyx", data.vyx],
+  ];
+  rows.forEach(([label, v]) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${label}</td><td style="text-align:right; font-family:var(--mono);">${fmt3(v)}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const stabilityBadge = data.stable
+    ? '<span class="badge stable">Mechanically stable</span>'
+    : '<span class="badge unstable">Mechanically unstable</span>';
+  document.getElementById('notes-2d').innerHTML = `
+    <p>${stabilityBadge}</p>
+    <p><strong>Elastic anisotropy index (A<sub>SU</sub>):</strong> ${fmt(data.A_SU)}<br>
+       <strong>Ranganathan index (A<sub>R</sub>):</strong> ${fmt(data.A_Ranganathan)}<br>
+       <strong>Kube index (A<sub>K</sub>):</strong> ${fmt(data.A_Kube)}</p>
+    ${data.warnings && data.warnings.length ? '<p class="error">' + data.warnings.join('<br>') + '</p>' : ''}
+  `;
+}
+
+async function analyze2D() {
+  const cijText = document.getElementById('cij-text-2d').value.trim();
+  if (!cijText) { setStatus('status-2d', 'Paste or load a Cij-2D matrix first.', true); return; }
+  currentCijText2D = cijText;
+  setStatus('status-2d', 'Analyzing…');
+  try {
+    const res = await fetch(`${API_BASE}/api/analyze_2d`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({cij_text: cijText})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Analysis failed'); }
+    const data = await res.json();
+    renderProps2D(data);
+    document.getElementById('results-section-2d').style.display = 'block';
+    document.getElementById('viz-section-2d').style.display = 'block';
+    setStatus('status-2d', 'Done.');
+    renderCurve2D();
+  } catch (e) { setStatus('status-2d', e.message, true); }
+}
+
+async function renderCurve2D() {
+  if (!currentCijText2D) return;
+  const property = document.getElementById('property-select-2d').value;
+  const vizStatus = document.getElementById('viz-status-2d');
+  vizStatus.textContent = 'Rendering…'; vizStatus.className = '';
+  try {
+    const res = await fetch(`${API_BASE}/api/curve_2d`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({cij_text: currentCijText2D, n_phi: 180})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Curve generation failed'); }
+    const curve = await res.json();
+    const r = curve[property];
+    const labelMap = {
+      youngs_modulus: "Young's Modulus (N/m)", shear_modulus: 'Shear Modulus (N/m)',
+      poisson_ratio: "Poisson's Ratio", linear_compressibility: 'Linear Compressibility'
+    };
+    Plotly.newPlot('plot-2d', [{
+      type: 'scatterpolar', r: r, theta: curve.phi_deg, mode: 'lines', fill: 'toself',
+      line: {color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#3d6e63'}
+    }], {
+      polar: {radialaxis: {visible: true}}, showlegend: false,
+      title: labelMap[property] || property, margin: {t:50},
+      paper_bgcolor: 'rgba(0,0,0,0)', font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}
+    }, {responsive:true});
+    vizStatus.textContent = '';
+  } catch (e) { vizStatus.textContent = e.message; vizStatus.className = 'error'; }
+}
+
+document.getElementById('analyze-2d-btn').addEventListener('click', analyze2D);
+document.getElementById('render-2d-btn').addEventListener('click', renderCurve2D);
+document.getElementById('dl-agr-2d').addEventListener('click', async () => {
+  if (!currentCijText2D) { alert('Analyze a 2D matrix first.'); return; }
+  const res = await fetch(`${API_BASE}/api/export/agr_2d`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({cij_text: currentCijText2D, n_phi: 180})
+  });
+  if (!res.ok) { alert('Download failed'); return; }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'young_2d.agr';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+
+// ================= 2D wave velocities =================
+document.getElementById('render-velocity-2d-btn').addEventListener('click', async () => {
+  if (!currentCijText2D) { setStatus('viz-status-velocity-2d', 'Analyze a 2D matrix first.', true); return; }
+  const arealDensity = parseFloat(document.getElementById('areal-density-input').value);
+  const vizStatus = document.getElementById('viz-status-velocity-2d');
+  if (isNaN(arealDensity) || arealDensity <= 0) { vizStatus.textContent = 'Enter a positive areal density (kg/m²).'; vizStatus.className = 'error'; return; }
+  vizStatus.textContent = 'Rendering…'; vizStatus.className = '';
+  try {
+    const res = await fetch(`${API_BASE}/api/velocity_2d`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({cij_text: currentCijText2D, areal_density: arealDensity, n_phi: 180})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail); }
+    const curve = await res.json();
+    Plotly.newPlot('plot-velocity-2d', [
+      {type:'scatterpolar', r: curve.velocity_longitudinal, theta: curve.phi_deg, mode:'lines', name:'Quasi-longitudinal', line:{color:'#3d6e63'}},
+      {type:'scatterpolar', r: curve.velocity_transverse, theta: curve.phi_deg, mode:'lines', name:'Quasi-transverse', line:{color:'#b5652d'}}
+    ], {
+      polar: {radialaxis: {visible: true, title: 'm/s'}}, showlegend: true,
+      title: 'In-plane wave velocities', margin:{t:50},
+      paper_bgcolor: 'rgba(0,0,0,0)', font: {color: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()}
+    }, {responsive:true});
+    vizStatus.textContent = '';
+  } catch (e) { vizStatus.textContent = e.message; vizStatus.className = 'error'; }
+});
+
+// ================= 1D materials =================
+document.getElementById('analyze-1d-btn').addEventListener('click', async () => {
+  const cijText = document.getElementById('cij-text-1d').value.trim();
+  if (!cijText) { setStatus('status-1d', 'Paste a 2x2 Cij-1D matrix first.', true); return; }
+  setStatus('status-1d', 'Analyzing…');
+  try {
+    const res = await fetch(`${API_BASE}/api/analyze_1d`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({cij_text: cijText})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Analysis failed'); }
+    const data = await res.json();
+    const tbody = document.querySelector('#props-table-1d tbody');
+    tbody.innerHTML = `
+      <tr><td>Young's modulus (GPa)</td><td style="text-align:right; font-family:var(--mono);">${data.Ex.toFixed(3)}</td></tr>
+      <tr><td>Shear modulus (GPa)</td><td style="text-align:right; font-family:var(--mono);">${data.Gxy.toFixed(3)}</td></tr>
+      <tr><td>Poisson's ratio</td><td style="text-align:right; font-family:var(--mono);">${data.vxy.toFixed(4)}</td></tr>
+    `;
+    const stabilityBadge = data.stable
+      ? '<span class="badge stable">Mechanically stable</span>'
+      : '<span class="badge unstable">Mechanically unstable</span>';
+    document.getElementById('notes-1d').innerHTML = `<p>${stabilityBadge}</p>` +
+      (data.warnings && data.warnings.length ? '<p class="error">' + data.warnings.join('<br>') + '</p>' : '');
+    document.getElementById('results-section-1d').style.display = 'block';
+    setStatus('status-1d', 'Done.');
+  } catch (e) { setStatus('status-1d', e.message, true); }
+});
+
+// ================= Offline database =================
+document.getElementById('offline-db-search-btn').addEventListener('click', async () => {
+  const query = document.getElementById('offline-db-query').value.trim();
+  const statusEl = document.getElementById('offline-db-status');
+  const resultsEl = document.getElementById('offline-db-results');
+  resultsEl.innerHTML = '';
+  statusEl.textContent = 'Searching…'; statusEl.className = '';
+  try {
+    const res = await fetch(`${API_BASE}/api/offline_db/search`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({query, limit: 25})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail); }
+    const data = await res.json();
+    statusEl.textContent = `${data.count.toLocaleString()} materials in the offline database. ${data.results.length} match(es) shown:`;
+    data.results.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'mp-result';
+      const badge = r.stable ? '<span class="badge stable">stable</span>' : '<span class="badge unstable">unstable</span>';
+      div.innerHTML = `<span style="font-family:var(--mono);">${r.material_id}</span> ${badge}`;
+      const btn = document.createElement('button');
+      btn.className = 'btn small'; btn.textContent = 'Load into 3D analyzer';
+      btn.addEventListener('click', () => loadOfflineMaterial(r.material_id));
+      div.appendChild(btn);
+      resultsEl.appendChild(div);
+    });
+  } catch (e) { statusEl.textContent = e.message; statusEl.className = 'error'; }
+});
+
+async function loadOfflineMaterial(materialId) {
+  const statusEl = document.getElementById('offline-db-status');
+  statusEl.textContent = `Loading ${materialId}…`; statusEl.className = '';
+  try {
+    const res = await fetch(`${API_BASE}/api/offline_db/get`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({material_id: materialId})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail); }
+    const data = await res.json();
+    document.getElementById('cij-text').value = data.cij_text;
+    document.querySelector('.tab-btn[data-tab="tab-3d"]').click();
+    statusEl.textContent = `Loaded ${data.material_id} into the 3D analyzer.`;
+  } catch (e) { statusEl.textContent = e.message; statusEl.className = 'error'; }
+}
+
+document.getElementById('mp-search-btn').addEventListener('click', async () => {
+  const apiKey = document.getElementById('mp-api-key').value.trim();
+  const formula = document.getElementById('mp-formula').value.trim();
+  const statusEl = document.getElementById('mp-status');
+  const resultsEl = document.getElementById('mp-results');
+  resultsEl.innerHTML = '';
+  if (!apiKey) { statusEl.textContent = 'Enter your Materials Project API key first.'; statusEl.className='error'; return; }
+  if (!formula) { statusEl.textContent = 'Enter a formula to search for.'; statusEl.className='error'; return; }
+  statusEl.textContent = 'Searching…'; statusEl.className='';
+  try {
+    const res = await fetch(`${API_BASE}/api/mp/search`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({api_key: apiKey, formula})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail); }
+    const data = await res.json();
+    if (!data.results.length) { statusEl.textContent = 'No materials with elasticity data found for that formula.'; return; }
+    statusEl.textContent = `${data.results.length} result(s):`;
+    data.results.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'mp-result';
+      div.innerHTML = `<span>${r.formula_pretty} <span style="color:var(--ink-soft); font-family:var(--mono);">(${r.material_id})</span></span>`;
+      const btn = document.createElement('button');
+      btn.className = 'btn small'; btn.textContent = 'Load into 3D analyzer';
+      btn.addEventListener('click', () => fetchMaterial(apiKey, r.material_id));
+      div.appendChild(btn);
+      resultsEl.appendChild(div);
+    });
+  } catch (e) { statusEl.textContent = e.message; statusEl.className = 'error'; }
+});
+
+async function fetchMaterial(apiKey, materialId) {
+  const statusEl = document.getElementById('mp-status');
+  statusEl.textContent = `Fetching ${materialId}…`; statusEl.className='';
+  try {
+    const res = await fetch(`${API_BASE}/api/mp/fetch`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({api_key: apiKey, material_id: materialId})
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail); }
+    const data = await res.json();
+    document.getElementById('cij-text').value = data.cij_text;
+    document.querySelector('.tab-btn[data-tab="tab-3d"]').click();
+    statusEl.textContent = `Loaded ${data.formula_pretty} (${data.material_id}) into the 3D analyzer.`;
+  } catch (e) { statusEl.textContent = e.message; statusEl.className = 'error'; }
+}
+
+// ================= Theme toggle =================
+(function initTheme() {
+  const stored = localStorage.getItem('elatools-theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const theme = stored || (prefersDark ? 'dark' : 'light');
+  applyTheme(theme);
+})();
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('theme-label').textContent = theme === 'dark' ? 'Dark' : 'Light';
+
+  // Keep already-rendered Plotly 3D text in sync with the active theme.
+  // This changes only Plotly's text colors; the plot data and application logic stay untouched.
+  if (typeof Plotly !== 'undefined' && document.getElementById('plot')?.data?.length) {
+    const plotInk = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim();
+    Plotly.relayout('plot', {
+      'font.color': plotInk,
+      'title.font.color': plotInk,
+      'scene.xaxis.color': plotInk,
+      'scene.xaxis.tickfont.color': plotInk,
+      'scene.xaxis.title.font.color': plotInk,
+      'scene.yaxis.color': plotInk,
+      'scene.yaxis.tickfont.color': plotInk,
+      'scene.yaxis.title.font.color': plotInk,
+      'scene.zaxis.color': plotInk,
+      'scene.zaxis.tickfont.color': plotInk,
+      'scene.zaxis.title.font.color': plotInk,
+    }).catch(() => {});
+  }
+}
+
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  try { localStorage.setItem('elatools-theme', next); } catch (e) { /* storage unavailable, theme just won't persist */ }
+});
+
+loadExamples();
+loadExamples2D();
+</script>
+</body>
+</html>

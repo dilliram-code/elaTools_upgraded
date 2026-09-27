@@ -1,0 +1,8 @@
+# Graphene, illustrative 2D in-plane stiffness matrix (N/m).
+# Values are typical of literature reports for graphene's 2D elastic
+# constants (e.g. Kudin, Scuseria & Yakobson, Phys. Rev. B 64, 235406,
+# 2001, and later DFT studies); treat as a representative isotropic
+# example for exercising the 2D-materials tools, not a precise citation.
+358.0   60.0    0.0
+ 60.0  358.0    0.0
+  0.0    0.0  149.0
